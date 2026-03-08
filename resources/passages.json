@@ -1,0 +1,19 @@
+{
+  "passages": [
+    {
+      "id": "short_1",
+      "difficulty": "easy",
+      "text": "The sun rises in the east and sets in the west. Birds sing in the morning."
+    },
+    {
+      "id": "paragraph_1", 
+      "difficulty": "medium",
+      "text": "Voice training requires patience and consistent practice. Each session builds upon previous work, gradually improving control and confidence. The key is regular, focused effort rather than occasional intense practice."
+    },
+    {
+      "id": "emotional_1",
+      "difficulty": "hard",
+      "text": "Excitement builds as the moment approaches! Hearts race with anticipation... then suddenly, calm descends like a gentle blanket. The contrast between these states creates powerful emotional resonance."
+    }
+  ]
+}
