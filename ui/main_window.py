@@ -9,6 +9,8 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ui.practice_session import PracticeSession
+from ui.dashboard import Dashboard
+from ui.settings_view import SettingsView
 from exercises import get_module_exercises, Exercise
 
 
@@ -137,7 +139,8 @@ class MainWindow(QMainWindow):
     def create_views(self):
         """Create all application views."""
         # Dashboard view (index 0)
-        self.dashboard_view = self.create_dashboard_view()
+        self.dashboard_view = Dashboard()
+        self.dashboard_view.start_exercise.connect(self.start_exercise)
         self.stacked_widget.addWidget(self.dashboard_view)
         
         # Modules view (index 1)
@@ -150,11 +153,9 @@ class MainWindow(QMainWindow):
         progress_placeholder.setStyleSheet("color: #94A3B8; font-size: 18px;")
         self.stacked_widget.addWidget(progress_placeholder)
         
-        # Settings view (index 3) - placeholder
-        settings_placeholder = QLabel("Settings View - Coming Soon")
-        settings_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        settings_placeholder.setStyleSheet("color: #94A3B8; font-size: 18px;")
-        self.stacked_widget.addWidget(settings_placeholder)
+        # Settings view (index 3)
+        self.settings_view = SettingsView()
+        self.stacked_widget.addWidget(self.settings_view)
         
         # Practice session view (index 4) - initially hidden
         self.practice_session_view = None

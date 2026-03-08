@@ -13,6 +13,7 @@ from exercises import get_exercise, Exercise
 from scoring import ScoringEngine
 from database import Database
 from ui.widgets.pitch_graph import PitchGraph
+from exercise_instructions import ExerciseInstructions, ExerciseContent
 from datetime import datetime
 
 
@@ -77,9 +78,11 @@ class PracticeSession(QWidget):
         header_layout.addStretch()
         
         # Instructions area
-        self.instructions_label = QLabel("Click 'Start Exercise' to begin")
+        initial_instructions = ExerciseInstructions.get_instructions(self.exercise_id, self.tier, "ready")
+        self.instructions_label = QLabel(initial_instructions)
         self.instructions_label.setFont(QFont("Arial", 12))
         self.instructions_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.instructions_label.setWordWrap(True)
         self.instructions_label.setStyleSheet("""
             QLabel {
                 background-color: #1A2332;
@@ -89,6 +92,25 @@ class PracticeSession(QWidget):
                 border: 1px solid #2A3444;
             }
         """)
+        
+        # Reading passage area (for exercises that need it)
+        self.reading_text = ExerciseContent.get_reading_text(self.exercise_id, self.tier)
+        self.reading_display = QTextEdit()
+        self.reading_display.setReadOnly(True)
+        self.reading_display.setPlainText(self.reading_text)
+        self.reading_display.setFont(QFont("Arial", 14))
+        self.reading_display.setStyleSheet("""
+            QTextEdit {
+                background-color: #1A2332;
+                color: #E2E8F0;
+                border: 1px solid #2A3444;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
+        # Only show reading display if there's text
+        if not self.reading_text:
+            self.reading_display.setVisible(False)
         
         # Visualizer area (TOP HALF - 40%+ viewport)
         self.visualizer_frame = QFrame()
@@ -230,6 +252,7 @@ class PracticeSession(QWidget):
         main_layout.addLayout(header_layout)
         main_layout.addWidget(desc_label)
         main_layout.addWidget(self.instructions_label)
+        main_layout.addWidget(self.reading_display)  # Reading passage (if applicable)
         main_layout.addWidget(self.visualizer_frame, 2)  # Takes 2/3 of space
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.progress_bar)
@@ -314,8 +337,9 @@ class PracticeSession(QWidget):
         self.exercise_seconds = 0
         self.exercise_timer.start(1000)  # Update every second
         
-        # Update instructions
-        self.instructions_label.setText(f"Exercise in progress... {self.exercise.duration}s remaining")
+        # Update instructions to recording phase
+        recording_instructions = ExerciseInstructions.get_instructions(self.exercise_id, self.tier, "recording")
+        self.instructions_label.setText(recording_instructions)
         
     def stop_exercise(self):
         """Stop the exercise and show results."""
