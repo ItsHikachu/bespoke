@@ -13,6 +13,11 @@ from exercises import get_exercise, Exercise
 from scoring import ScoringEngine
 from database import Database
 from ui.widgets.pitch_graph import PitchGraph
+from ui.widgets.amplitude_bar import AmplitudeBar
+from ui.widgets.amplitude_envelope import AmplitudeEnvelope
+from ui.widgets.wpm_gauge import WPMGauge
+from ui.widgets.db_meter import DBMeter
+from ui.widgets.centroid_bar import CentroidBar
 from exercise_instructions import ExerciseInstructions, ExerciseContent
 from datetime import datetime
 
@@ -286,14 +291,39 @@ class PracticeSession(QWidget):
         
     def _create_visualizer(self):
         """Create the appropriate visualizer for this exercise."""
+        tier_params = self.exercise.get_tier(self.tier).params
+        
         if self.exercise.visualizer == "pitch_graph":
             self.visualizer = PitchGraph()
-            # Set exercise-specific parameters
-            tier_params = self.exercise.get_tier(self.tier).params
             if "target_pitch" in tier_params and "tolerance" in tier_params:
                 self.visualizer.set_target(tier_params["target_pitch"], tier_params["tolerance"])
+                
+        elif self.exercise.visualizer == "amplitude_bar":
+            # Module 2: Single amplitude bar
+            self.visualizer = AmplitudeBar()
+            
+        elif self.exercise.visualizer == "amplitude_envelope":
+            # Module 2: Amplitude envelope trace
+            self.visualizer = AmplitudeEnvelope()
+            if "target_amplitude" in tier_params:
+                self.visualizer.set_target(tier_params["target_amplitude"])
+                
+        elif self.exercise.visualizer == "wpm_gauge":
+            # Module 3: WPM gauge
+            self.visualizer = WPMGauge()
+            if "target_wpm" in tier_params:
+                self.visualizer.set_target(tier_params["target_wpm"])
+                
+        elif self.exercise.visualizer == "db_meter":
+            # Module 4: dB meter
+            self.visualizer = DBMeter()
+            
+        elif self.exercise.visualizer == "centroid_bar":
+            # Module 4: Spectral centroid bar
+            self.visualizer = CentroidBar()
+            
         else:
-            # Placeholder for other visualizers
+            # Fallback placeholder
             placeholder = QLabel(f"Visualizer: {self.exercise.visualizer}")
             placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
             placeholder.setStyleSheet("color: #94A3B8;")
@@ -461,10 +491,38 @@ class PracticeSession(QWidget):
         if not self.is_recording:
             return
             
-        # Update pitch graph if applicable
-        if hasattr(self.visualizer, 'add_data_point') and self.exercise_data["pitch_history"]:
-            latest_pitch = self.exercise_data["pitch_history"][-1]
+        # Get latest data
+        latest_pitch = self.exercise_data["pitch_history"][-1] if self.exercise_data["pitch_history"] else 0
+        latest_amplitude = self.exercise_data["amplitude_history"][-1] if self.exercise_data["amplitude_history"] else -60
+        
+        # Update based on visualizer type
+        if isinstance(self.visualizer, PitchGraph):
             self.visualizer.add_data_point(latest_pitch)
+            
+        elif isinstance(self.visualizer, AmplitudeBar):
+            self.visualizer.set_amplitude(latest_amplitude)
+            
+        elif isinstance(self.visualizer, AmplitudeEnvelope):
+            self.visualizer.add_data_point(latest_amplitude)
+            
+        elif isinstance(self.visualizer, WPMGauge):
+            # WPM is calculated post-exercise with transcription
+            # During recording, just show speaking status
+            is_speaking = self.audio_engine.is_voice_active if self.audio_engine else False
+            self.visualizer.set_speaking(is_speaking)
+            
+        elif isinstance(self.visualizer, DBMeter):
+            # Calculate peak from recent history
+            if self.exercise_data["amplitude_history"]:
+                recent = self.exercise_data["amplitude_history"][-10:]
+                peak_db = max(recent)
+                rms_db = latest_amplitude
+                self.visualizer.set_levels(peak_db, rms_db)
+                
+        elif isinstance(self.visualizer, CentroidBar):
+            # Get spectral centroid from audio engine
+            centroid = self.audio_engine.spectral_centroid if self.audio_engine else 0
+            self.visualizer.set_centroid(centroid)
             
     def closeEvent(self, event):
         """Clean up when widget is closed."""

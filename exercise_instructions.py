@@ -27,6 +27,21 @@ class ExerciseInstructions:
             "1c": ExerciseInstructions._get_1c_instructions,
             "1d": ExerciseInstructions._get_1d_instructions,
             "1e": ExerciseInstructions._get_1e_instructions,
+            "2a": ExerciseInstructions._get_2a_instructions,
+            "2b": ExerciseInstructions._get_2b_instructions,
+            "2c": ExerciseInstructions._get_2c_instructions,
+            "2d": ExerciseInstructions._get_2d_instructions,
+            "2e": ExerciseInstructions._get_2e_instructions,
+            "3a": ExerciseInstructions._get_3a_instructions,
+            "3b": ExerciseInstructions._get_3b_instructions,
+            "3c": ExerciseInstructions._get_3c_instructions,
+            "3d": ExerciseInstructions._get_3d_instructions,
+            "3e": ExerciseInstructions._get_3e_instructions,
+            "4a": ExerciseInstructions._get_4a_instructions,
+            "4b": ExerciseInstructions._get_4b_instructions,
+            "4c": ExerciseInstructions._get_4c_instructions,
+            "4d": ExerciseInstructions._get_4d_instructions,
+            "4e": ExerciseInstructions._get_4e_instructions,
         }
         
         if exercise_id in instructions_map:
@@ -144,6 +159,136 @@ EXCITED: We're about to make history!
 FEARFUL: What if everything falls apart?"""
         
         return ""
+    
+    # Module 2: Breath & Sustain instructions
+    @staticmethod
+    def _get_2a_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Sustain a steady tone for as long as possible with consistent volume."
+        elif phase == "recording":
+            targets = {"foundation": 10, "intermediate": 20, "advanced": 30}
+            return f"Hold a steady tone for {targets.get(tier, 10)} seconds. Keep amplitude stable."
+        return "Exercise complete! Check your sustain duration and stability score."
+    
+    @staticmethod
+    def _get_2b_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Measure breath control by comparing 'S' and 'Z' sound durations."
+        elif phase == "recording":
+            return "Say 'SSSS' for as long as possible, then 'ZZZZ' for as long as possible. Healthy ratio is 0.8-1.2."
+        return "Exercise complete! Check your S/Z ratio."
+    
+    @staticmethod
+    def _get_2c_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Count upward on a single breath, maintaining consistent volume."
+        elif phase == "recording":
+            targets = {"foundation": 15, "intermediate": 25, "advanced": 35}
+            return f"Count: 1, 2, 3... on one breath. Target: {targets.get(tier, 15)} numbers with steady volume."
+        return "Exercise complete! Check how far you counted."
+    
+    @staticmethod
+    def _get_2d_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Read while maintaining consistent volume throughout."
+        elif phase == "recording":
+            return "Read the passage with steady, consistent volume. Avoid volume drops or spikes."
+        return "Exercise complete! Check your volume consistency score."
+    
+    @staticmethod
+    def _get_2e_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Smoothly increase and decrease volume following the target pattern."
+        elif phase == "recording":
+            return "Follow the volume contour shown. Crescendo (get louder) and decrescendo (get quieter) smoothly."
+        return "Exercise complete! Check how well you matched the target shape."
+    
+    # Module 3: Pace & Rhythm instructions
+    @staticmethod
+    def _get_3a_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Speak at a consistent target pace measured in words per minute."
+        elif phase == "recording":
+            targets = {"foundation": 130, "intermediate": 150, "advanced": "alternating"}
+            return f"Speak at {targets.get(tier, 130)} WPM. Match the metronome pace shown."
+        return "Exercise complete! Check your WPM accuracy."
+    
+    @staticmethod
+    def _get_3b_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Practice controlled pauses at marked points in the text."
+        elif phase == "recording":
+            return "Read the passage. Pause at marked points (|). Avoid unplanned pauses."
+        return "Exercise complete! Check your pause accuracy."
+    
+    @staticmethod
+    def _get_3c_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Shift between different speaking rates on cue."
+        elif phase == "recording":
+            return "Follow the tempo changes. Speed up and slow down as indicated."
+        return "Exercise complete! Check your tempo accuracy."
+    
+    @staticmethod
+    def _get_3d_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Balance speaking time and silence for optimal pacing."
+        elif phase == "recording":
+            return "Speak naturally with appropriate pauses. Target 70-80% talk time, rest silence."
+        return "Exercise complete! Check your talk/silence ratio."
+    
+    @staticmethod
+    def _get_3e_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Lock into a rhythmic speaking pattern with consistent syllable timing."
+        elif phase == "recording":
+            return "Speak with rhythmic cadence. Match the beat pattern shown."
+        return "Exercise complete! Check your rhythm correlation."
+    
+    # Module 4: Dynamics & Projection instructions
+    @staticmethod
+    def _get_4a_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Explore your full dynamic range from quietest to loudest comfortable volume."
+        elif phase == "recording":
+            targets = {"foundation": 15, "intermediate": 20, "advanced": 25}
+            return f"Speak from very quiet to very loud. Target range: {targets.get(tier, 15)} dB."
+        return "Exercise complete! Check your dynamic range."
+    
+    @staticmethod
+    def _get_4b_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Place vocal emphasis on specific words for meaning and impact."
+        elif phase == "recording":
+            return "Read the passage. EMPHASIZE the marked words with increased volume."
+        return "Exercise complete! Check your emphasis accuracy."
+    
+    @staticmethod
+    def _get_4c_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Adjust volume for different projection distances."
+        elif phase == "recording":
+            return "Speak as if addressing: close (3ft), medium (15ft), far (50ft). Clear volume steps."
+        return "Exercise complete! Check your projection scaling."
+    
+    @staticmethod
+    def _get_4d_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Follow a dynamic volume pattern that creates emotional impact."
+        elif phase == "recording":
+            return "Match the volume contour shown. Build and release tension through dynamics."
+        return "Exercise complete! Check your volume correlation."
+    
+    @staticmethod
+    def _get_4e_instructions(tier: str, phase: str) -> str:
+        if phase == "ready":
+            return "Control vocal brightness through resonance and articulation."
+        elif phase == "recording":
+            if tier == "foundation":
+                return "Speak naturally. We'll measure your baseline brightness."
+            else:
+                return "Speak with brighter tone quality. Increase spectral centroid above baseline."
+        return "Exercise complete! Check your brightness tracking."
     
     @staticmethod
     def get_emotional_cues(tier: str) -> List[str]:
