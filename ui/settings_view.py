@@ -241,7 +241,15 @@ class SettingsView(QWidget):
         # Start audio engine for calibration
         device_id = self.mic_combo.currentData()
         self.audio_engine = AudioEngine(device=device_id)
-        self.audio_engine.start()
+        try:
+            self.audio_engine.start()
+        except Exception as exc:
+            self.calibrating = False
+            self.calibrate_btn.setEnabled(True)
+            self.calibrate_status.setText(f"Calibration failed: {exc}")
+            self.calibrate_status.setStyleSheet("color: #EF4444; font-size: 10px;")
+            self.audio_engine = None
+            return
         
         # Start level monitoring
         self.level_timer.start(100)  # Update every 100ms

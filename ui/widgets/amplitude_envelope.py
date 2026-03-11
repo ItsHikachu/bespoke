@@ -11,8 +11,6 @@ class AmplitudeEnvelope(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.init_ui()
-        
         # Data storage
         self.time_window = 10.0  # seconds
         self.sample_rate = 44100
@@ -22,6 +20,8 @@ class AmplitudeEnvelope(QWidget):
         # Amplitude data (time, amplitude_db) pairs
         self.amplitude_data = []
         self.target_amplitude = None  # Optional target line
+
+        self.init_ui()
         
         # Timer for updates
         self.timer = QTimer()

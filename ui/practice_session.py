@@ -39,6 +39,7 @@ class PracticeSession(QWidget):
         self.audio_engine = AudioEngine()
         self.scoring_engine = ScoringEngine()
         self.database = Database()
+        self._load_audio_settings()
         
         # Session state
         self.is_recording = False
@@ -67,7 +68,7 @@ class PracticeSession(QWidget):
         
         # Back button
         self.back_button = QPushButton("← Back")
-        self.back_button.clicked.connect(self.back_requested.emit)
+        self.back_button.clicked.connect(self._handle_back_request)
         self.back_button.setMaximumWidth(80)
         
         # Exercise info
@@ -135,7 +136,7 @@ class PracticeSession(QWidget):
         control_layout = QHBoxLayout()
         
         self.start_button = QPushButton("Start Exercise")
-        self.start_button.setFont(QFont("Arial, 14, QFont.Weight.Bold"))
+        self.start_button.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         self.start_button.setStyleSheet("""
             QPushButton {
                 background-color: #2DD4BF;
@@ -151,7 +152,7 @@ class PracticeSession(QWidget):
         self.start_button.clicked.connect(self.toggle_exercise)
         
         self.stop_button = QPushButton("Stop")
-        self.stop_button.setFont(QFont("Arial, 14, QFont.Weight.Bold"))
+        self.stop_button.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         self.stop_button.setStyleSheet("""
             QPushButton {
                 background-color: #EF4444;
@@ -337,9 +338,26 @@ class PracticeSession(QWidget):
             self.start_exercise()
         else:
             self.stop_exercise()
+
+    def _load_audio_settings(self):
+        """Apply persisted audio settings."""
+        saved_device_id = self.database.get_setting("microphone_device_id")
+        if saved_device_id not in (None, ""):
+            try:
+                self.audio_engine.device = int(saved_device_id)
+            except ValueError:
+                self.audio_engine.device = None
+
+        saved_threshold = self.database.get_setting("voice_threshold")
+        if saved_threshold not in (None, ""):
+            try:
+                self.audio_engine.voice_threshold = float(saved_threshold)
+            except ValueError:
+                pass
             
     def start_exercise(self):
         """Start the exercise recording."""
+        self._load_audio_settings()
         self.is_recording = True
         self.session_start_time = datetime.now()
         
@@ -352,8 +370,23 @@ class PracticeSession(QWidget):
         }
         
         # Start audio
-        self.audio_engine.start()
-        self.audio_engine.start_recording()
+        try:
+            self.audio_engine.start()
+            self.audio_engine.start_recording()
+        except Exception as exc:
+            self.is_recording = False
+            self.instructions_label.setText(f"Unable to start audio input: {exc}")
+            self.start_button.setText("Start Exercise")
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            return
+
+        if hasattr(self.visualizer, "clear"):
+            self.visualizer.clear()
+        if hasattr(self.visualizer, "reset_peak"):
+            self.visualizer.reset_peak()
+        if hasattr(self.visualizer, "reset_range"):
+            self.visualizer.reset_range()
         
         # Update UI
         self.start_button.setText("Recording...")
@@ -373,6 +406,9 @@ class PracticeSession(QWidget):
         
     def stop_exercise(self):
         """Stop the exercise and show results."""
+        if not self.is_recording:
+            return
+
         self.is_recording = False
         
         # Stop audio
@@ -396,6 +432,10 @@ class PracticeSession(QWidget):
         self.start_button.setText("Start Exercise")
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+
+        # Update instructions to completed phase
+        completed_instructions = ExerciseInstructions.get_instructions(self.exercise_id, self.tier, "completed")
+        self.instructions_label.setText(completed_instructions)
         
     def update_exercise_timer(self):
         """Update the exercise timer display."""
@@ -410,8 +450,9 @@ class PracticeSession(QWidget):
         # Update progress bar
         self.progress_bar.setValue(self.exercise_seconds)
         
-        # Update instructions
-        self.instructions_label.setText(f"Exercise in progress... {remaining}s remaining")
+        # Keep exercise-specific instructions while showing remaining time
+        recording_instructions = ExerciseInstructions.get_instructions(self.exercise_id, self.tier, "recording")
+        self.instructions_label.setText(f"{recording_instructions}\n\n{remaining}s remaining")
         
         # Auto-stop when duration reached
         if self.exercise_seconds >= self.exercise.duration:
@@ -475,6 +516,12 @@ class PracticeSession(QWidget):
         
         # Show confirmation
         self.instructions_label.setText("Session saved successfully!")
+
+    def _handle_back_request(self):
+        """Stop active session and request navigation back."""
+        if self.is_recording:
+            self.stop_exercise()
+        self.back_requested.emit()
         
     def _on_audio_analysis(self, pitch: float, amplitude_db: float, centroid: float, is_voice: bool):
         """Handle audio analysis updates from audio engine."""

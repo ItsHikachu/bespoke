@@ -10,8 +10,6 @@ class PitchGraph(QWidget):
     
     def __init__(self):
         super().__init__()
-        self.init_ui()
-        
         # Data storage
         self.time_window = 5.0  # seconds
         self.sample_rate = 44100
@@ -22,6 +20,8 @@ class PitchGraph(QWidget):
         self.pitch_data = []
         self.target_pitch = 200.0  # Hz, will be set per exercise
         self.tolerance = 30.0  # Hz, will be set per exercise
+
+        self.init_ui()
         
         # Timer for updates
         self.timer = QTimer()

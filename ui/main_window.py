@@ -332,18 +332,15 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
     @pyqtSlot(str, str)
     def start_exercise(self, exercise_id: str, tier: str):
         """Start a practice session."""
-        # Create practice session view if not exists
-        if self.practice_session_view is None:
-            self.practice_session_view = PracticeSession(exercise_id, tier)
-            self.practice_session_view.session_completed.connect(self.on_session_completed)
-            self.practice_session_view.back_requested.connect(self.on_back_to_dashboard)
-            self.stacked_widget.addWidget(self.practice_session_view)
-        else:
-            # Reconfigure for new exercise
-            self.practice_session_view = PracticeSession(exercise_id, tier)
-            self.practice_session_view.session_completed.connect(self.on_session_completed)
-            self.practice_session_view.back_requested.connect(self.on_back_to_dashboard)
-            self.stacked_widget.insertWidget(4, self.practice_session_view)
+        if self.practice_session_view is not None:
+            self.stacked_widget.removeWidget(self.practice_session_view)
+            self.practice_session_view.deleteLater()
+            self.practice_session_view = None
+
+        self.practice_session_view = PracticeSession(exercise_id, tier)
+        self.practice_session_view.session_completed.connect(self.on_session_completed)
+        self.practice_session_view.back_requested.connect(self.on_back_to_dashboard)
+        self.stacked_widget.insertWidget(4, self.practice_session_view)
             
         # Switch to practice session view
         self.stacked_widget.setCurrentIndex(4)
@@ -351,12 +348,14 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
     @pyqtSlot(dict)
     def on_session_completed(self, session_data):
         """Handle completed practice session."""
+        self.dashboard_view.refresh()
         # Return to dashboard after session
         self.switch_view("dashboard")
         
     @pyqtSlot()
     def on_back_to_dashboard(self):
         """Handle back button from practice session."""
+        self.dashboard_view.refresh()
         self.switch_view("dashboard")
         
     def switch_view(self, view_name: str):
@@ -369,7 +368,7 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
         }
         
         if view_name in view_map:
-            self.stacked_widget.setCurrentIndex(view_map)
+            self.stacked_widget.setCurrentIndex(view_map[view_name])
             
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts."""
