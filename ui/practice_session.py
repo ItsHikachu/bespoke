@@ -19,7 +19,9 @@ from ui.widgets.wpm_gauge import WPMGauge
 from ui.widgets.db_meter import DBMeter
 from ui.widgets.centroid_bar import CentroidBar
 from exercise_instructions import ExerciseInstructions, ExerciseContent
+from whisper_transcriber import WhisperTranscriber
 from datetime import datetime
+import tempfile
 
 
 class PracticeSession(QWidget):
@@ -47,9 +49,13 @@ class PracticeSession(QWidget):
         self.exercise_data = {
             "pitch_history": [],
             "amplitude_history": [],
+            "centroid_history": [],
             "time_stamps": [],
             "duration": 0.0
         }
+        
+        # Whisper transcriber for Module 3 exercises
+        self.transcriber = WhisperTranscriber() if self.exercise.uses_whisper else None
         
         # UI update timer
         self.ui_timer = QTimer()
@@ -365,6 +371,7 @@ class PracticeSession(QWidget):
         self.exercise_data = {
             "pitch_history": [],
             "amplitude_history": [],
+            "centroid_history": [],
             "time_stamps": [],
             "duration": 0.0
         }
@@ -411,6 +418,16 @@ class PracticeSession(QWidget):
 
         self.is_recording = False
         
+        # Save recording before stopping audio (needed for whisper transcription)
+        recording_path = None
+        if self.transcriber and self.exercise.uses_whisper:
+            try:
+                tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+                recording_path = self.audio_engine.save_recording(tmp.name)
+                tmp.close()
+            except Exception:
+                recording_path = None
+        
         # Stop audio
         self.audio_engine.stop()
         
@@ -421,6 +438,19 @@ class PracticeSession(QWidget):
         # Calculate final duration
         if self.session_start_time:
             self.exercise_data["duration"] = (datetime.now() - self.session_start_time).total_seconds()
+        
+        # Run whisper transcription for Module 3 exercises
+        if recording_path and self.transcriber:
+            try:
+                transcription = self.transcriber.transcribe(recording_path)
+                self.exercise_data["transcription"] = transcription
+            except Exception:
+                self.exercise_data["transcription"] = {}
+            finally:
+                try:
+                    os.unlink(recording_path)
+                except OSError:
+                    pass
             
         # Score the exercise
         scores = self.scoring_engine.score_exercise(self.exercise, self.exercise_data, self.tier)
@@ -532,6 +562,7 @@ class PracticeSession(QWidget):
             timestamp = len(self.exercise_data["pitch_history"]) * 0.023  # ~43Hz update rate
             self.exercise_data["pitch_history"].append(pitch)
             self.exercise_data["amplitude_history"].append(amplitude_db)
+            self.exercise_data["centroid_history"].append(centroid)
             self.exercise_data["time_stamps"].append(timestamp)
             
     def _update_visualizer(self):
