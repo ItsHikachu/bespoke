@@ -12,12 +12,17 @@ class CurriculumManager:
     def __init__(self):
         self.db = Database()
         self.coach = OllamaCoach()
+        self._cache = None  # In-memory curriculum cache
         
     def get_or_generate_curriculum(self) -> Dict[str, Any]:
-        """Get current curriculum from DB, or generate a new one if stale/missing."""
+        """Get current curriculum from cache, DB, or generate a new one if stale/missing."""
+        if self._cache is not None:
+            return self._cache
+            
         existing = self.db.get_current_curriculum()
         
         if existing and not self._is_stale(existing):
+            self._cache = existing
             return existing
             
         # Generate new curriculum
@@ -41,6 +46,7 @@ class CurriculumManager:
         }
         
         self.db.save_curriculum(curriculum_data)
+        self._cache = curriculum_data
         return curriculum_data
         
     def get_today_exercises(self) -> List[str]:
@@ -117,3 +123,7 @@ class CurriculumManager:
             progress['baselines'] = baselines
             
         return progress
+
+    def invalidate_cache(self):
+        """Clear the in-memory cache to force a fresh DB read."""
+        self._cache = None

@@ -402,4 +402,5 @@ class Dashboard(QWidget):
             
     def refresh(self):
         """Refresh dashboard data."""
+        self.curriculum_mgr.invalidate_cache()
         self.load_data()
