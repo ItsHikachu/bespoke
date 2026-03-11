@@ -11,6 +11,7 @@ from ui.widgets.streak_calendar import StreakCalendar
 from ui.widgets.progress_rings import ProgressRings
 from database import Database
 from exercises import get_all_exercises
+from curriculum_manager import CurriculumManager
 
 
 class Dashboard(QWidget):
@@ -22,6 +23,7 @@ class Dashboard(QWidget):
     def __init__(self):
         super().__init__()
         self.database = Database()
+        self.curriculum_mgr = CurriculumManager()
         self.init_ui()
         self.load_data()
         
@@ -86,6 +88,9 @@ class Dashboard(QWidget):
         stats_layout.addWidget(calendar_frame)
         stats_layout.addWidget(rings_frame)
         
+        # Weekly plan card
+        self.weekly_plan_card = self.create_weekly_plan_card()
+        
         # Baseline comparison card (if baseline exists)
         self.baseline_card = self.create_baseline_card()
         
@@ -93,6 +98,7 @@ class Dashboard(QWidget):
         main_layout.addWidget(welcome_label)
         main_layout.addWidget(subtitle_label)
         main_layout.addWidget(session_card)
+        main_layout.addWidget(self.weekly_plan_card)
         main_layout.addLayout(stats_layout)
         main_layout.addWidget(self.baseline_card)
         main_layout.addStretch()
@@ -118,40 +124,25 @@ class Dashboard(QWidget):
         title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         title.setStyleSheet("color: #2DD4BF;")
         
+        # Focus module & rationale
+        self.focus_label = QLabel("")
+        self.focus_label.setFont(QFont("Arial", 11))
+        self.focus_label.setStyleSheet("color: #F59E0B;")
+        self.focus_label.setWordWrap(True)
+        
         # Recommended exercises
         rec_label = QLabel("Recommended exercises:")
         rec_label.setFont(QFont("Arial", 12))
         rec_label.setStyleSheet("color: #94A3B8;")
         
-        # Exercise buttons
-        exercises_layout = QHBoxLayout()
-        exercises_layout.setSpacing(15)
+        # Exercise buttons container
+        self.exercises_layout = QHBoxLayout()
+        self.exercises_layout.setSpacing(15)
         
-        # Default recommendations (Module 1 exercises)
-        recommended = ["1a", "1b", "1c"]
-        
-        for ex_id in recommended:
-            btn = QPushButton(f"Exercise {ex_id}")
-            btn.setFont(QFont("Arial", 12))
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #2A3444;
-                    color: #E2E8F0;
-                    border: 1px solid #374151;
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                }
-                QPushButton:hover {
-                    background-color: #374151;
-                }
-            """)
-            btn.clicked.connect(lambda checked, e=ex_id: self.start_exercise.emit(e, "foundation"))
-            exercises_layout.addWidget(btn)
-        
-        # Big start button
-        start_btn = QPushButton("Start Practice Session")
-        start_btn.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        start_btn.setStyleSheet("""
+        # Big start button (starts first recommended exercise)
+        self.start_btn = QPushButton("Start Practice Session")
+        self.start_btn.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        self.start_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2DD4BF;
                 color: white;
@@ -163,12 +154,63 @@ class Dashboard(QWidget):
                 background-color: #26B5A3;
             }
         """)
-        start_btn.clicked.connect(lambda: self.start_exercise.emit("1a", "foundation"))
+        self.start_btn.clicked.connect(lambda: self.start_exercise.emit("1a", "foundation"))
         
         layout.addWidget(title)
+        layout.addWidget(self.focus_label)
         layout.addWidget(rec_label)
-        layout.addLayout(exercises_layout)
-        layout.addWidget(start_btn)
+        layout.addLayout(self.exercises_layout)
+        layout.addWidget(self.start_btn)
+        
+        return card
+    
+    def create_weekly_plan_card(self):
+        """Create the weekly curriculum plan card."""
+        card = QFrame()
+        card.setStyleSheet("""
+            QFrame {
+                background-color: #1A2332;
+                border: 1px solid #2A3444;
+                border-radius: 8px;
+                padding: 20px;
+            }
+        """)
+        
+        layout = QVBoxLayout(card)
+        
+        # Header row
+        header_layout = QHBoxLayout()
+        
+        title = QLabel("Weekly Plan")
+        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        title.setStyleSheet("color: #2DD4BF;")
+        header_layout.addWidget(title)
+        
+        header_layout.addStretch()
+        
+        regen_btn = QPushButton("Regenerate Plan")
+        regen_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #374151;
+                color: #E2E8F0;
+                border: 1px solid #4B5563;
+                padding: 6px 14px;
+                border-radius: 4px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #4B5563;
+            }
+        """)
+        regen_btn.clicked.connect(self._regenerate_curriculum)
+        header_layout.addWidget(regen_btn)
+        
+        layout.addLayout(header_layout)
+        
+        # Day grid
+        self.day_grid = QGridLayout()
+        self.day_grid.setSpacing(8)
+        layout.addLayout(self.day_grid)
         
         return card
         
@@ -255,6 +297,108 @@ class Dashboard(QWidget):
             baseline_text += f"Sustain: {baseline.get('sustain_duration', 0):.1f}s\n"
             baseline_text += f"Dynamic Range: {baseline.get('dynamic_range', 0):.1f} dB"
             self.baseline_info.setText(baseline_text)
+        
+        # Load curriculum
+        self._load_curriculum()
+        
+    def _load_curriculum(self):
+        """Load and display curriculum data."""
+        from datetime import datetime
+        
+        # Get today's exercises
+        today_exercises = self.curriculum_mgr.get_today_exercises()
+        focus_module = self.curriculum_mgr.get_focus_module()
+        rationale = self.curriculum_mgr.get_rationale()
+        
+        module_names = {1: "Pitch Control", 2: "Breath & Sustain",
+                       3: "Pace & Rhythm", 4: "Dynamics & Projection"}
+        focus_name = module_names.get(focus_module, "Pitch Control")
+        self.focus_label.setText(f"Focus: Module {focus_module} ({focus_name}) — {rationale}")
+        
+        # Clear old exercise buttons
+        while self.exercises_layout.count():
+            child = self.exercises_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+                
+        # Add curriculum-driven exercise buttons
+        for ex_id in today_exercises:
+            btn = QPushButton(f"Exercise {ex_id}")
+            btn.setFont(QFont("Arial", 12))
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #2A3444;
+                    color: #E2E8F0;
+                    border: 1px solid #374151;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                }
+                QPushButton:hover {
+                    background-color: #374151;
+                }
+            """)
+            btn.clicked.connect(lambda checked, e=ex_id: self.start_exercise.emit(e, "foundation"))
+            self.exercises_layout.addWidget(btn)
+            
+        # Update start button to launch first recommended exercise
+        if today_exercises:
+            first_ex = today_exercises[0]
+            try:
+                self.start_btn.clicked.disconnect()
+            except TypeError:
+                pass
+            self.start_btn.clicked.connect(lambda: self.start_exercise.emit(first_ex, "foundation"))
+        
+        # Populate weekly plan grid
+        self._populate_weekly_grid()
+        
+    def _populate_weekly_grid(self):
+        """Fill the weekly plan grid with day columns."""
+        from datetime import datetime
+        
+        # Clear existing grid
+        while self.day_grid.count():
+            child = self.day_grid.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        weekly_plan = self.curriculum_mgr.get_full_weekly_plan()
+        today_index = datetime.now().weekday()
+        
+        for col, day_entry in enumerate(weekly_plan):
+            day_name = day_entry.get('day', '')
+            exercises = day_entry.get('exercises', [])
+            is_today = (col == today_index)
+            
+            # Day header
+            header = QLabel(day_name)
+            header.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+            header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if is_today:
+                header.setStyleSheet("color: #2DD4BF; background-color: #1E3A3A; border-radius: 4px; padding: 4px;")
+            else:
+                header.setStyleSheet("color: #94A3B8; padding: 4px;")
+            self.day_grid.addWidget(header, 0, col)
+            
+            # Exercise labels
+            if exercises:
+                ex_text = "\n".join(exercises)
+            else:
+                ex_text = "Rest"
+            
+            ex_label = QLabel(ex_text)
+            ex_label.setFont(QFont("Arial", 10))
+            ex_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if is_today:
+                ex_label.setStyleSheet("color: #E2E8F0; background-color: #1E3A3A; border-radius: 4px; padding: 6px;")
+            else:
+                ex_label.setStyleSheet("color: #6B7280; padding: 6px;")
+            self.day_grid.addWidget(ex_label, 1, col)
+            
+    def _regenerate_curriculum(self):
+        """Force regenerate the weekly curriculum."""
+        self.curriculum_mgr.generate_curriculum()
+        self._load_curriculum()
             
     def refresh(self):
         """Refresh dashboard data."""

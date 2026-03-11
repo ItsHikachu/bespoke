@@ -1,8 +1,8 @@
 # Bespoke Development Progress
 
-## Current Status: Phase 2 Implementation Complete
+## Current Status: Phase 4 Implementation In Progress
 
-### Date: 2026-03-08
+### Date: 2026-03-11
 
 ## Phase 1 Deliverables ✅
 
@@ -155,14 +155,62 @@
 - 1d: Emotional Contrast ✅ (instructions + emotional cues ready)
 - 1e: Range Expansion ✅ (instructions ready)
 
-## Phase 3 Planning (Next)
+## Phase 3 Deliverables ✅
 
-Will include:
-- Amplitude visualizer widgets for Module 2
-- WPM gauge and speech/silence display for Module 3
-- faster-whisper integration for Module 3 post-exercise
-- dB meter and centroid bar for Module 4
-- All remaining exercises (2a-2e, 3a-3e, 4a-4e)
+### All Visualizers and Modules 2-4 Complete
+
+1. **All Visualizer Widgets** ✅
+   - `ui/widgets/amplitude_bar.py` - Module 2 vertical meter
+   - `ui/widgets/amplitude_envelope.py` - Module 2 scrolling trace  
+   - `ui/widgets/wpm_gauge.py` - Module 3 circular gauge
+   - `ui/widgets/db_meter.py` - Module 4 peak/RMS meters
+   - `ui/widgets/centroid_bar.py` - Module 4 brightness bar
+   - All visualizers import, instantiate, and render correctly
+
+2. **Modules 2-4 Exercises** ✅
+   - All 20 exercises implemented across 4 modules
+   - Exercise-visualizer mapping working correctly
+   - Real-time data flow from audio engine to all visualizers
+   - Thread-safe UI updates via QTimer pattern
+
+3. **faster-whisper Integration** ✅
+   - `whisper_transcriber.py` functional for Module 3
+   - Graceful degradation when whisper unavailable
+   - Post-session transcription working
+
+4. **Comprehensive Testing** ✅
+   - All visualizers render without paint errors
+   - Audio engine integrates cleanly with all widgets
+   - No critical bugs (crashes, data loss)
+   - Application launches successfully
+
+## Phase 4 Implementation (In Progress)
+
+### Step 1: Baseline Assessment Flow ✅
+
+1. **`ui/baseline_assessment.py`** ✅
+   - First-run experience for new users
+   - 4 baseline exercises (one per module)
+   - Measures: pitch range, sustain duration, dynamic range, avg WPM
+   - Progress tracking and results summary
+
+2. **Database Integration** ✅
+   - `save_baselines()` method in database.py
+   - `get_latest_baselines()` retrieval method
+   - `has_baselines()` first-run detection
+
+3. **Main Window Integration** ✅
+   - First-run detection in main_window.py
+   - Automatic baseline assessment display for new users
+   - Seamless transition to dashboard for returning users
+
+### Next: Step 2 - Tier Gating Logic
+
+Will implement:
+- Intermediate unlocks when 3/5 Foundation exercises score >70%
+- Advanced unlocks when 3/5 Intermediate exercises score >70%
+- Lock icons in module view
+- `ui/module_view.py` creation
 
 ## Technical Notes
 

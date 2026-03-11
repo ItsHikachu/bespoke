@@ -11,7 +11,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ui.practice_session import PracticeSession
 from ui.dashboard import Dashboard
 from ui.settings_view import SettingsView
+from ui.baseline_assessment import BaselineAssessment
+from ui.module_view import ModuleView
+from ui.progress_view import ProgressView
 from exercises import get_module_exercises, Exercise
+from database import Database
 
 
 class MainWindow(QMainWindow):
@@ -20,7 +24,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.current_session = None
+        self.db = Database()
         self.init_ui()
+        self.check_first_run()
         
     def init_ui(self):
         self.setWindowTitle("Bespoke - Voice Practice Gym")
@@ -138,26 +144,30 @@ class MainWindow(QMainWindow):
         
     def create_views(self):
         """Create all application views."""
-        # Dashboard view (index 0)
+        # Baseline assessment view (index 0) - for first-run users
+        self.baseline_view = BaselineAssessment()
+        self.baseline_view.assessment_completed.connect(self.on_baseline_completed)
+        self.stacked_widget.addWidget(self.baseline_view)
+        
+        # Dashboard view (index 1)
         self.dashboard_view = Dashboard()
         self.dashboard_view.start_exercise.connect(self.start_exercise)
         self.stacked_widget.addWidget(self.dashboard_view)
         
-        # Modules view (index 1)
-        self.modules_view = self.create_modules_view()
+        # Modules view (index 2)
+        self.modules_view = ModuleView()
+        self.modules_view.start_exercise.connect(self.start_exercise)
         self.stacked_widget.addWidget(self.modules_view)
         
-        # Progress view (index 2) - placeholder
-        progress_placeholder = QLabel("Progress View - Coming Soon")
-        progress_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        progress_placeholder.setStyleSheet("color: #94A3B8; font-size: 18px;")
-        self.stacked_widget.addWidget(progress_placeholder)
+        # Progress view (index 3)
+        self.progress_view = ProgressView()
+        self.stacked_widget.addWidget(self.progress_view)
         
-        # Settings view (index 3)
+        # Settings view (index 4)
         self.settings_view = SettingsView()
         self.stacked_widget.addWidget(self.settings_view)
         
-        # Practice session view (index 4) - initially hidden
+        # Practice session view (index 5) - initially hidden
         self.practice_session_view = None
         
     def create_dashboard_view(self):
@@ -236,99 +246,6 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
         
         return widget
         
-    def create_modules_view(self):
-        """Create the modules browser view."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setSpacing(30)
-        layout.setContentsMargins(40, 40, 40, 40)
-        
-        # Title
-        title_label = QLabel("Training Modules")
-        title_label.setFont(QFont("Arial", 24, QFont.Weight.Bold))
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("color: #2DD4BF;")
-        
-        # Module cards container
-        modules_container = QWidget()
-        modules_layout = QVBoxLayout(modules_container)
-        modules_layout.setSpacing(20)
-        
-        # Create module cards
-        for module_num in range(1, 5):
-            module_frame = self.create_module_card(module_num)
-            modules_layout.addWidget(module_frame)
-            
-        layout.addWidget(title_label)
-        layout.addWidget(modules_container)
-        
-        return widget
-        
-    def create_module_card(self, module_num: int):
-        """Create a card for a specific module."""
-        frame = QFrame()
-        frame.setStyleSheet("""
-            QFrame {
-                background-color: #1A2332;
-                border: 1px solid #2A3444;
-                border-radius: 8px;
-                padding: 20px;
-            }
-        """)
-        
-        layout = QVBoxLayout(frame)
-        
-        # Module title
-        module_titles = {
-            1: "Module 1: Pitch Control",
-            2: "Module 2: Breath & Sustain", 
-            3: "Module 3: Pace & Rhythm",
-            4: "Module 4: Dynamics & Projection"
-        }
-        
-        module_descriptions = {
-            1: "Master pitch accuracy and control with real-time visual feedback",
-            2: "Develop breath support, sustain, and volume control",
-            3: "Improve speaking pace, rhythm, and timing patterns",
-            4: "Enhance dynamic range, projection, and vocal quality"
-        }
-        
-        title_label = QLabel(module_titles[module_num])
-        title_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #2DD4BF;")
-        
-        desc_label = QLabel(module_descriptions[module_num])
-        desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("color: #94A3B8;")
-        
-        # Exercise list
-        exercises = get_module_exercises(module_num)
-        exercise_layout = QVBoxLayout()
-        
-        for exercise in exercises:
-            exercise_btn = QPushButton(f"{exercise.id}: {exercise.name}")
-            exercise_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #0F1419;
-                    color: #E2E8F0;
-                    border: 1px solid #2A3444;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background-color: #2A3444;
-                }
-            """)
-            exercise_btn.clicked.connect(lambda e, ex=exercise: self.start_exercise(ex.id, "foundation"))
-            exercise_layout.addWidget(exercise_btn)
-            
-        layout.addWidget(title_label)
-        layout.addWidget(desc_label)
-        layout.addLayout(exercise_layout)
-        
-        return frame
-        
     @pyqtSlot(str, str)
     def start_exercise(self, exercise_id: str, tier: str):
         """Start a practice session."""
@@ -340,15 +257,16 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
         self.practice_session_view = PracticeSession(exercise_id, tier)
         self.practice_session_view.session_completed.connect(self.on_session_completed)
         self.practice_session_view.back_requested.connect(self.on_back_to_dashboard)
-        self.stacked_widget.insertWidget(4, self.practice_session_view)
+        self.stacked_widget.insertWidget(5, self.practice_session_view)
             
         # Switch to practice session view
-        self.stacked_widget.setCurrentIndex(4)
+        self.stacked_widget.setCurrentIndex(5)
         
     @pyqtSlot(dict)
     def on_session_completed(self, session_data):
         """Handle completed practice session."""
         self.dashboard_view.refresh()
+        self.progress_view.refresh()
         # Return to dashboard after session
         self.switch_view("dashboard")
         
@@ -361,10 +279,11 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
     def switch_view(self, view_name: str):
         """Switch between main views."""
         view_map = {
-            "dashboard": 0,
-            "modules": 1, 
-            "progress": 2,
-            "settings": 3
+            "baseline": 0,
+            "dashboard": 1,
+            "modules": 2, 
+            "progress": 3,
+            "settings": 4
         }
         
         if view_name in view_map:
@@ -374,5 +293,21 @@ Module 4: Dynamics & Projection - Control volume and vocal quality
         """Handle keyboard shortcuts."""
         if event.key() == Qt.Key.Key_Escape:
             # ESC key returns to dashboard
-            if self.stacked_widget.currentIndex() == 4:  # Practice session
+            if self.stacked_widget.currentIndex() == 5:  # Practice session
                 self.on_back_to_dashboard()
+                
+    def check_first_run(self):
+        """Check if this is first run and show baseline assessment if needed."""
+        if not self.db.has_baselines():
+            # First run - show baseline assessment
+            self.switch_view("baseline")
+        else:
+            # Returning user - show dashboard
+            self.switch_view("dashboard")
+            
+    @pyqtSlot(dict)
+    def on_baseline_completed(self, baseline_data):
+        """Handle completed baseline assessment."""
+        # Switch to dashboard after baseline assessment
+        self.dashboard_view.refresh()
+        self.switch_view("dashboard")

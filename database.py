@@ -190,6 +190,30 @@ class Database:
                 
             return sessions
             
+    def get_latest_session(self, exercise_id: str, tier: str) -> Optional[Dict[str, Any]]:
+        """Get the latest session for a specific exercise and tier."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM sessions 
+                    WHERE exercise = ? 
+                    AND scores LIKE ? 
+                    ORDER BY timestamp DESC 
+                    LIMIT 1
+                """, (exercise_id, f'%"tier": "{tier}"%'))
+                row = cursor.fetchone()
+                if row:
+                    columns = ['id', 'date', 'module', 'exercise', 'duration', 'scores', 'timestamp']
+                    session = dict(zip(columns, row))
+                    # Parse JSON scores
+                    session['scores'] = json.loads(session['scores'] or '{}')
+                    return session
+                return None
+        except Exception as e:
+            # If there's any error, return None
+            return None
+            
     def get_session_stats(self, days: int = 30) -> Dict[str, Any]:
         """Get practice statistics for the last N days."""
         with sqlite3.connect(self.db_path) as conn:
@@ -264,3 +288,52 @@ class Database:
                 curriculum['tier_adjustments'] = json.loads(curriculum['tier_adjustments'] or '{}')
                 return curriculum
             return None
+            
+    # Baseline methods
+    def save_baselines(self, pitch_min: float, pitch_max: float, 
+                      sustain_duration: float, dynamic_range: float, avg_wpm: float):
+        """Save baseline measurements."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO baselines 
+                (date, pitch_min, pitch_max, sustain_duration, dynamic_range, avg_wpm)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                datetime.now().isoformat(),
+                pitch_min,
+                pitch_max,
+                sustain_duration,
+                dynamic_range,
+                avg_wpm
+            ))
+            conn.commit()
+            
+    def get_latest_baselines(self) -> Optional[Dict[str, float]]:
+        """Get the most recent baseline measurements."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT pitch_min, pitch_max, sustain_duration, dynamic_range, avg_wpm
+                FROM baselines
+                ORDER BY date DESC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'pitch_min': row[0] or 0,
+                    'pitch_max': row[1] or 0,
+                    'sustain_duration': row[2] or 0,
+                    'dynamic_range': row[3] or 0,
+                    'avg_wpm': row[4] or 0
+                }
+            return None
+            
+    def has_baselines(self) -> bool:
+        """Check if user has completed baseline assessment."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM baselines")
+            count = cursor.fetchone()[0]
+            return count > 0
