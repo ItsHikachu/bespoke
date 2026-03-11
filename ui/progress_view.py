@@ -384,19 +384,23 @@ class ProgressView(QWidget):
         today = datetime.now().date()
         sorted_days = sorted(set(practice_days), reverse=True)
 
-        streak = 0
-        expected = today
-        for day_str in sorted_days:
-            try:
-                day = datetime.fromisoformat(day_str).date()
-            except (ValueError, TypeError):
-                continue
-            if day == expected:
-                streak += 1
-                expected -= timedelta(days=1)
-            elif day < expected:
-                break
-        return streak
+        def _count_from(start_date):
+            streak = 0
+            expected = start_date
+            for day_str in sorted_days:
+                try:
+                    day = datetime.fromisoformat(day_str).date()
+                except (ValueError, TypeError):
+                    continue
+                if day == expected:
+                    streak += 1
+                    expected -= timedelta(days=1)
+                elif day < expected:
+                    break
+            return streak
+
+        # Try starting from today, then from yesterday (if user hasn't practiced today yet)
+        return max(_count_from(today), _count_from(today - timedelta(days=1)))
 
     def refresh(self):
         """Refresh progress data."""

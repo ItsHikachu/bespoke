@@ -51,11 +51,18 @@ class Database:
                     date TEXT NOT NULL,
                     module INTEGER NOT NULL,
                     exercise TEXT NOT NULL,
+                    tier TEXT DEFAULT 'foundation',
                     duration REAL,
                     scores TEXT,
                     timestamp TEXT NOT NULL
                 )
             """)
+            
+            # Migration: add tier column if missing (existing DBs)
+            cursor.execute("PRAGMA table_info(sessions)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'tier' not in columns:
+                cursor.execute("ALTER TABLE sessions ADD COLUMN tier TEXT DEFAULT 'foundation'")
             
             # Curriculum table
             cursor.execute("""
@@ -64,9 +71,16 @@ class Database:
                     week_of TEXT NOT NULL,
                     focus_module INTEGER,
                     daily_plan TEXT,
-                    tier_adjustments TEXT
+                    tier_adjustments TEXT,
+                    rationale TEXT DEFAULT ''
                 )
             """)
+            
+            # Migration: add rationale column if missing (existing DBs)
+            cursor.execute("PRAGMA table_info(curriculum)")
+            curr_columns = [col[1] for col in cursor.fetchall()]
+            if 'rationale' not in curr_columns:
+                cursor.execute("ALTER TABLE curriculum ADD COLUMN rationale TEXT DEFAULT ''")
             
             # Recordings table
             cursor.execute("""
@@ -144,12 +158,13 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO sessions 
-                (date, module, exercise, duration, scores, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (date, module, exercise, tier, duration, scores, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 session_data['date'],
                 session_data['module'],
                 session_data['exercise'],
+                session_data.get('tier', 'foundation'),
                 session_data.get('duration'),
                 json.dumps(session_data.get('scores', {})),
                 session_data['timestamp']
@@ -162,7 +177,8 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             query = """
-                SELECT * FROM sessions 
+                SELECT id, date, module, exercise, tier, duration, scores, timestamp
+                FROM sessions 
                 WHERE 1=1
             """
             params = []
@@ -178,7 +194,7 @@ class Database:
             rows = cursor.fetchall()
             
             sessions = []
-            columns = ['id', 'date', 'module', 'exercise', 'duration', 'scores', 'timestamp']
+            columns = ['id', 'date', 'module', 'exercise', 'tier', 'duration', 'scores', 'timestamp']
             for row in rows:
                 session = dict(zip(columns, row))
                 # Parse JSON scores
@@ -196,15 +212,16 @@ class Database:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT * FROM sessions 
+                    SELECT id, date, module, exercise, tier, duration, scores, timestamp
+                    FROM sessions 
                     WHERE exercise = ? 
-                    AND scores LIKE ? 
+                    AND tier = ? 
                     ORDER BY timestamp DESC 
                     LIMIT 1
-                """, (exercise_id, f'%"tier": "{tier}"%'))
+                """, (exercise_id, tier))
                 row = cursor.fetchone()
                 if row:
-                    columns = ['id', 'date', 'module', 'exercise', 'duration', 'scores', 'timestamp']
+                    columns = ['id', 'date', 'module', 'exercise', 'tier', 'duration', 'scores', 'timestamp']
                     session = dict(zip(columns, row))
                     # Parse JSON scores
                     session['scores'] = json.loads(session['scores'] or '{}')
@@ -259,13 +276,14 @@ class Database:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT OR REPLACE INTO curriculum 
-                (week_of, focus_module, daily_plan, tier_adjustments)
-                VALUES (?, ?, ?, ?)
+                (week_of, focus_module, daily_plan, tier_adjustments, rationale)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 curriculum_data['week_of'],
                 curriculum_data.get('focus_module'),
                 json.dumps(curriculum_data.get('daily_plan', {})),
-                json.dumps(curriculum_data.get('tier_adjustments', {}))
+                json.dumps(curriculum_data.get('tier_adjustments', {})),
+                curriculum_data.get('rationale', '')
             ))
             conn.commit()
             
@@ -274,18 +292,20 @@ class Database:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM curriculum 
+                SELECT id, week_of, focus_module, daily_plan, tier_adjustments, rationale
+                FROM curriculum 
                 WHERE week_of >= date('now', '-7 days')
-                ORDER BY week_of DESC 
+                ORDER BY week_of DESC, id DESC
                 LIMIT 1
             """)
             row = cursor.fetchone()
             if row:
-                columns = ['id', 'week_of', 'focus_module', 'daily_plan', 'tier_adjustments']
+                columns = ['id', 'week_of', 'focus_module', 'daily_plan', 'tier_adjustments', 'rationale']
                 curriculum = dict(zip(columns, row))
                 # Parse JSON fields
                 curriculum['daily_plan'] = json.loads(curriculum['daily_plan'] or '{}')
                 curriculum['tier_adjustments'] = json.loads(curriculum['tier_adjustments'] or '{}')
+                curriculum['rationale'] = curriculum.get('rationale', '') or ''
                 return curriculum
             return None
             

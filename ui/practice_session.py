@@ -504,6 +504,7 @@ class PracticeSession(QWidget):
             "date": datetime.now().strftime("%Y-%m-%d"),
             "module": self.exercise.module,
             "exercise": self.exercise_id,
+            "tier": self.tier,
             "duration": self.exercise_data["duration"],
             "scores": self.current_scores,
             "timestamp": datetime.now().isoformat()

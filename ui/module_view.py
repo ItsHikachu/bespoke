@@ -231,12 +231,9 @@ class ModuleView(QWidget):
         
     def refresh(self):
         """Refresh the module view to update tier status."""
-        # Clear and recreate all module sections
-        # This is a simple approach - could be optimized to only update changed sections
-        for i in reversed(range(self.layout().count())):
-            child = self.layout().itemAt(i).widget()
-            if child:
-                child.deleteLater()
+        # Reparent old layout to a temporary widget to delete it
+        if self.layout() is not None:
+            QWidget().setLayout(self.layout())
                 
         # Recreate UI
         self.init_ui()

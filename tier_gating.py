@@ -19,7 +19,7 @@ class TierGating:
                 if session_data and 'scores' in session_data:
                     # Extract overall score from session data
                     score_data = session_data['scores']
-                    overall_score = score_data.get('overall', 0)
+                    overall_score = score_data.get('score', score_data.get('overall', 0))
                     scores[exercise_id] = overall_score
                 else:
                     scores[exercise_id] = 0.0
